@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Coach {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  ageGroups AgeGroup[]
+  
+  @@map("coaches")
+}
+
+model AgeGroup {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  minAge      Int
+  maxAge      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  coach    Coach  @relation(fields: [coachId], references: [id])
+  coachId  String
+  players  Player[]
+  sessions TrainingSession[]
+  
+  @@map("age_groups")
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  dateOfBirth DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  ageGroup   AgeGroup @relation(fields: [ageGroupId], references: [id])
+  ageGroupId String
+  
+  trainingPlans TrainingPlan[]
+  attendances   Attendance[]
+  
+  @@map("players")
+}
+
+model TrainingPlan {
+  id             String   @id @default(cuid())
+  sessionsBooked Int
+  sessionsUsed   Int      @default(0)
+  complimentaryUsed Int   @default(0)
+  startDate      DateTime
+  endDate        DateTime
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  player   Player @relation(fields: [playerId], references: [id])
+  playerId String
+  
+  @@map("training_plans")
+}
+
+model TrainingSession {
+  id          String      @id @default(cuid())
+  date        DateTime
+  timeSlot    TimeSlot
+  status      SessionStatus @default(SCHEDULED)
+  maxPlayers  Int         @default(20)
+  groupPhoto  String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  ageGroup    AgeGroup    @relation(fields: [ageGroupId], references: [id])
+  ageGroupId  String
+  attendances Attendance[]
+  
+  @@map("training_sessions")
+}
+
+model Attendance {
+  id           String         @id @default(cuid())
+  status       AttendanceStatus
+  isComplimentary Boolean     @default(false)
+  photo        String?
+  notes        String?
+  markedAt     DateTime       @default(now())
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  
+  player    Player          @relation(fields: [playerId], references: [id])
+  playerId  String
+  session   TrainingSession @relation(fields: [sessionId], references: [id])
+  sessionId String
+  
+  @@unique([playerId, sessionId])
+  @@map("attendances")
+}
+
+enum TimeSlot {
+  MORNING
+  EVENING
+}
+
+enum SessionStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
